@@ -2,11 +2,11 @@ const mongoose = require("mongoose");
 
 const PostArticleSchema = new mongoose.Schema({
 
-    // agency_id: {type: String, require: true},
-    category: { type: String, require: true },
-    title: { type: String, require: true },
-    sub_heading: { type: String, require: true },
-    short_details: { type: String, require: true },
+    userId: { type: String, require: true },
+    category: { type: String, required: true },
+    title: { type: String, required: true },
+    sub_heading: { type: String, required: true },
+    short_details: { type: String, required: true },
     body: { type: String, require: true },
     image: { type: String, require: true },
     url: { type: String, require: true },
@@ -15,6 +15,8 @@ const PostArticleSchema = new mongoose.Schema({
     news_sections: { type: String, require: true },
     change_byline: { type: String, require: true },
     source: { type: String, require: true },
+    isApproved: { type: Boolean, default: false },
+    isRejected: { type: Boolean, default: false }
 
 }, { timestamps: true });
 

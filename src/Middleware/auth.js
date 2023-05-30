@@ -39,7 +39,7 @@ const authorization = async function (req, res, next) {
     if (userLoggedIn != userId) {
       return res.status(403).send({
         status: false,
-        message: "authorization failed",
+        message: "Authorization failed",
       });
     }
     next();

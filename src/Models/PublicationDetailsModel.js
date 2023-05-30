@@ -1,9 +1,11 @@
 const mongoose = require("mongoose");
 
-const PublicationDetailsSchema = new mongoose.Schema({
-
+const PublicationDetailsSchema = new mongoose.Schema(
+  {
     publisher_name: { type: String },
     type_of_Entity: { type: String },
+    mobile: { type: Number, require: true },
+    email: { type: String, require: true },
     password: { type: String },
     owner_key: { type: String },
     publisher_BIO: { type: String },
@@ -17,8 +19,6 @@ const PublicationDetailsSchema = new mongoose.Schema({
     RNI_No: { type: Number },
     RNI_Regn_date: { type: String },
 
-    mobile: { type: Number, require: true },
-    email: { type: String, require: true },
     tech_name: { type: String, require: true },
     tech_mobile: { type: Number, require: true },
     tech_email: { type: String, require: true },
@@ -38,7 +38,6 @@ const PublicationDetailsSchema = new mongoose.Schema({
     comm_address: { type: String, require: true },
     comm_state_city: { type: String },
     comm_pin_code: { type: Number },
-
 
     pub_social_facebook: { type: String },
     pub_social_twitter: { type: String },
@@ -69,6 +68,9 @@ const PublicationDetailsSchema = new mongoose.Schema({
     status_user: { type: String },
     status_publication: { type: String },
 
-}, { timestamps: true });
+    token: { type: String },
+  },
+  { timestamps: true }
+);
 
-module.exports = mongoose.model("PublicationDetails", PublicationDetailsSchema)
+module.exports = mongoose.model("PublicationDetails", PublicationDetailsSchema);

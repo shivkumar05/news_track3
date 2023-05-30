@@ -15,11 +15,10 @@ Router.post("/mediaType", Controller.createMediaModel)
 Router.get("/get-states", Controller.getState)
 Router.post("/check-box", Controller.CheckBox)
 Router.post("/select", Controller.SelectCategories)
-Router.post("/user-role", Controller.UserRole)
 Router.post("/status", Controller.StatusModel)
-Router.get("/:id/postGet", Controller.getPostNews)
-Router.put("/:id/postUpdate", Controller.updatePostNews);
 Router.post("/newsPaperAgencyLogin", Controller.NewsPaperAgencyLogin)
+Router.get("/:userId/postGet", Controller.getPostNews)
+Router.put("/:userId/postUpdate", Controller.updatePostNews);
 
 
 
