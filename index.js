@@ -13,6 +13,7 @@ const Middleware = require("./src/Middleware/auth");
 const UserRoleModel = require("./src/Models/User_RoleModel");
 const PostArticleModel = require("./src/Models/PostArticleModel");
 const PublicationDetailsModel = require("./src/Models/PublicationDetailsModel");
+const UserModel = require("./src/Models/UserModel");
 const port = process.env.PORT || 4000;
 
 app.use(cors());
@@ -22,7 +23,7 @@ router.use(bodyParser.urlencoded({ extended: true }));
 
 mongoose.set("strictQuery", false);
 
-//=====================[Multer Storage]=================================
+//===================== [ Multer Storage ] =================================
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     const destinationDir = "./uploads";
@@ -69,7 +70,9 @@ app.post(
         news_sections,
         change_byline,
         source,
-        isApproved
+        isApproved,
+        schedule_time,
+        schedule_date
       } = data;
 
       data.userId = userId;
@@ -88,7 +91,7 @@ app.post(
   }
 );
 
-//======================[Create User Role]==================================
+//====================== [Create User Role] ==================================
 
 app.post("/user-role", upload.single("user_image"), async (req, res) => {
   try {
@@ -192,7 +195,7 @@ app.post("/user-role", upload.single("user_image"), async (req, res) => {
   }
 });
 
-//=======================[Create Publication Details]=========
+//======================= [Create Publication Details] =========
 
 app.post(
   "/publication-details",
@@ -296,32 +299,37 @@ app.post(
   }
 );
 
-//*******************[Approve and Update]************ */
+//******************* [Approve and Update] ************ */
 
 app.put("/:userId/ApprovalupdateNews", Middleware.jwtValidation, Middleware.authorization, async (req, res) => {
   try {
     let postNewsId = req.body._id;
-    let News = await PostArticleModel.findById({ _id: postNewsId });
+    const { schedule_time, schedule_date } = req.body;
 
-    if (News.isApproved == false) {
-      var updateNews = await PostArticleModel.findByIdAndUpdate(
-        { _id: postNewsId },
-        { $set: { isApproved: true } },
-        { new: true }
-      );
+    try {
+      let news = await PostArticleModel.findById(postNewsId);
+
+      if (!news) {
+        return res.status(404).json({ error: 'News not found' });
+      }
+
+      if (!news.isApproved) {
+        news.schedule_time = schedule_time;
+        news.schedule_date = schedule_date;
+        news.isApproved = true;
+      }
+      const updatedNews = await news.save();
+
+      return res.status(200).json({
+        status: true,
+        message: 'Post updated successfully',
+        isApproved: updatedNews.isApproved
+      });
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({ error: 'Server error' });
     }
-    // if (News.isApproved == true) {
-    //   var updateNews = await PostArticleModel.findByIdAndUpdate(
-    //     { _id: postNewsId },
-    //     { $set: { isApproved: false } },
-    //     { new: true }
-    //   );
-    // }
-    return res.status(200).send({
-      status: true,
-      message: "Post Update Successfully",
-      isApproved: updateNews.isApproved
-    })
+
 
   } catch (err) {
     res.status(500).send({ status: false, error: err.message });
@@ -333,46 +341,55 @@ app.get("/:userId/getApproval", Middleware.jwtValidation, Middleware.authorizati
     const data = req.body;
     const userId = req.params.userId;
 
-    try {
-      const response = await PostArticleModel.find({ userId: userId });
+    const response = await PostArticleModel.find().lean();
 
-      if (response.length > 0) {
-        const approvedPosts = response.filter(post => post.isApproved && !post.isRejected);
+    if (response.length > 0) {
+      const approvedPosts = response.filter((post) => post.isApproved && !post.isRejected);
 
-        if (approvedPosts.length > 0) {
-          res.status(200).send({
-            status: true,
-            message: "Get Post News Successfully",
-            data: approvedPosts,
-          });
-        } else {
-          res.status(200).send({
-            status: true,
-            message: "No approved post news found for the user.",
-            data: [],
-          });
+      if (approvedPosts.length > 0) {
+        for (let i = 0; i < approvedPosts.length; i++) {
+          const postUserId = approvedPosts[i].userId;
+
+          let user = await UserModel.findById({ _id: postUserId }).lean();
+          if (user) {
+            approvedPosts[i].username = user.name;
+          } else {
+            let publication = await PublicationDetailsModel.findById({ _id: postUserId }).lean();
+            if (publication) {
+              approvedPosts[i].username = publication.publisher_name;
+            }
+          }
         }
+
+        res.status(200).send({
+          status: true,
+          message: "Get Post News Successfully",
+          data: approvedPosts,
+        });
       } else {
         res.status(200).send({
           status: true,
-          message: "No post news found for the user.",
+          message: "No approved post news found for the user.",
           data: [],
         });
       }
-    } catch (error) {
-      res.status(500).send({
-        status: false,
-        message: "An error occurred while retrieving post news.",
-        error: error.message,
+    } else {
+      res.status(200).send({
+        status: true,
+        message: "No post news found for the user.",
+        data: [],
       });
     }
-
   } catch (error) {
-    res.status(500).send({ success: false, msg: error.message });
+    res.status(500).send({
+      status: false,
+      message: "An error occurred while retrieving post news.",
+      error: error.message,
+    });
   }
 });
 
-//**********************[ Reject And Update]*************** */
+//**********************[ Reject And Update ]*************** */
 app.put("/:userId/RejectUpdateNews", Middleware.jwtValidation, Middleware.authorization, async (req, res) => {
   try {
     let postNewsId = req.body._id;
@@ -408,48 +425,61 @@ app.get("/:userId/getRejected", Middleware.jwtValidation, Middleware.authorizati
     const data = req.body;
     const userId = req.params.userId;
 
-    try {
-      const response = await PostArticleModel.find({ userId: userId });
+    // Retrieve all posts
+    const response = await PostArticleModel.find().lean();
 
-      if (response.length > 0) {
-        const rejectedPosts = response.filter(post => post.isRejected && !post.isApproved);
+    if (response.length > 0) {
+      const rejectedPosts = response.filter((post) => post.isRejected && !post.isApproved);
 
-        if (rejectedPosts.length > 0) {
-          res.status(200).send({
-            status: true,
-            message: "Get Post News Successfully",
-            data: rejectedPosts,
-          });
-        } else {
-          res.status(200).send({
-            status: true,
-            message: "No Rejected post news found for the user.",
-            data: [],
-          });
+      if (rejectedPosts.length > 0) {
+        // Add username to each post
+        for (let i = 0; i < rejectedPosts.length; i++) {
+          const postUserId = rejectedPosts[i].userId;
+          // console.log(postUserId);
+
+          // Retrieve UserModel by ID
+          let user = await UserModel.findById({ _id: postUserId }).lean();
+          if (user) {
+            rejectedPosts[i].username = user.name;
+          } else {
+            let publication = await PublicationDetailsModel.findById({ _id: postUserId }).lean();
+            if (publication) {
+              rejectedPosts[i].username = publication.publisher_name;
+              console.log(publication.publisher_name);
+            }
+          }
         }
+
+        res.status(200).send({
+          status: true,
+          message: "Get Post News Successfully",
+          data: rejectedPosts,
+        });
       } else {
         res.status(200).send({
           status: true,
-          message: "No post news found for the user.",
+          message: "No rejected post news found for the user.",
           data: [],
         });
       }
-    } catch (error) {
-      res.status(500).send({
-        status: false,
-        message: "An error occurred while retrieving post news.",
-        error: error.message,
+    } else {
+      res.status(200).send({
+        status: true,
+        message: "No post news found for the user.",
+        data: [],
       });
     }
-
   } catch (error) {
-    res.status(500).send({ success: false, msg: error.message });
+    res.status(500).send({
+      status: false,
+      message: "An error occurred while retrieving post news.",
+      error: error.message,
+    });
   }
 });
 
 
-
-//************************Database Connection************ */
+//************************ [Database Connection] ************ */
 mongoose
   .connect(
     "mongodb+srv://Newspaper:Li6BnjEH2cYgkQNc@cluster0.j5zzyto.mongodb.net/"

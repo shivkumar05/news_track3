@@ -14,6 +14,8 @@ const UserRoleModel = require("../Models/User_RoleModel");
 const StatusModels = require("../Models/StatusModel");
 const PublicationDetailsModel = require("../Models/PublicationDetailsModel");
 const PostNewsModel = require("../Models/PostArticleModel");
+const UserModel = require("../Models/UserModel");
+const PostArticleModel = require("../Models/PostArticleModel");
 
 //*************** [Create User] *************************/
 
@@ -357,15 +359,35 @@ const getPostNews = async (req, res) => {
   try {
     let data = req.body;
     let userId = req.params.userId;
+    var allPosts = []
+    const getdata = await PostNewsModel.find().lean();
+    allPosts = getdata.filter(post => !post.isRejected && !post.isApproved);
 
-    const getdata = await PostNewsModel.find({ userId: userId }, data);
+    for (let i = 0; i < allPosts.length; i++) {
+      const postUserId = allPosts[i].userId;
+      console.log(postUserId);
 
-    res
-      .status(200)
-      .send({ success: true, msg: "Post News Get Success", data: getdata });
+      // Retrieve UserModel by ID
+
+      let user = await UserModel.findById({ _id: postUserId });
+      if (user) {
+        allPosts[i].username = user.name;
+        console.log(user.name);
+      } else {
+        let publication = await PublicationDetailsModel.findById(postUserId);
+        if (publication) {
+          allPosts[i].username = publication.publisher_name;
+          console.log(publication.publisher_name);
+        }
+      }
+
+    }
+
+    res.status(200).send({ success: true, msg: "Post News Get Success", data: allPosts });
   } catch (error) {
     res.status(500).send({ success: false, msg: error.message });
   }
+
 };
 
 //==========================[Update Post News]======================//
@@ -382,7 +404,6 @@ const updatePostNews = async (req, res) => {
     if (!updatedPost) {
       return res.status(404).send({ success: false, msg: "Post not found" });
     }
-
     res.status(200).send({
       success: true,
       msg: "Post updated successfully",
@@ -393,24 +414,28 @@ const updatePostNews = async (req, res) => {
   }
 };
 
-//===============[Get Approval]=======================
-const getApproval = async (req, res) => {
+
+//**********************[Schedule Date/time Update ]****************************** */
+
+const updateScheduleDateTime = async (req, res) => {
+  const { _id } = req.body;
+  const { schedule_time, schedule_date } = req.body;
   try {
-    let data = req.body;
-    const userId = req.params.userId;
+    const article = await PostArticleModel.findById(_id);
 
-    const response = await PostArticleModel.find({ userId: userId });
-    console.log(response, "aaa");
-
-    res.status(200).send({
-      status: true,
-      message: " Get Post News Successfully",
-      data: response,
-    });
+    if (!article) {
+      return res.status(404).json({ error: 'Article not found' });
+    }
+    article.schedule_time = schedule_time;
+    article.schedule_date = schedule_date;
+    await article.save();
+    res.json(article);
   } catch (error) {
-    res.status(500).send({ success: false, msg: error.message });
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
   }
 };
+
 
 module.exports = {
   createUser,
@@ -428,4 +453,5 @@ module.exports = {
   SelectCategories,
   getState,
   StatusModel,
+  updateScheduleDateTime,
 };
