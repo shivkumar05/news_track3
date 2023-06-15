@@ -417,24 +417,24 @@ const updatePostNews = async (req, res) => {
 
 //**********************[Schedule Date/time Update ]****************************** */
 
-const updateScheduleDateTime = async (req, res) => {
-  const { _id } = req.body;
-  const { schedule_time, schedule_date } = req.body;
-  try {
-    const article = await PostArticleModel.findById(_id);
+// const updateScheduleDateTime = async (req, res) => {
+//   const { _id } = req.body;
+//   const { schedule_time, schedule_date } = req.body;
+//   try {
+//     const article = await PostArticleModel.findById(_id);
 
-    if (!article) {
-      return res.status(404).json({ error: 'Article not found' });
-    }
-    article.schedule_time = schedule_time;
-    article.schedule_date = schedule_date;
-    await article.save();
-    res.json(article);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Server error' });
-  }
-};
+//     if (!article) {
+//       return res.status(404).json({ error: 'Article not found' });
+//     }
+//     article.schedule_time = schedule_time;
+//     article.schedule_date = schedule_date;
+//     await article.save();
+//     res.json(article);
+//   } catch (error) {
+//     console.error(error);
+//     res.status(500).json({ error: 'Server error' });
+//   }
+// };
 
 
 module.exports = {
@@ -453,5 +453,5 @@ module.exports = {
   SelectCategories,
   getState,
   StatusModel,
-  updateScheduleDateTime,
+  // updateScheduleDateTime,
 };

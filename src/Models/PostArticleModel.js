@@ -17,8 +17,8 @@ const PostArticleSchema = new mongoose.Schema({
     source: { type: String, require: true },
     isApproved: { type: Boolean, default: false },
     isRejected: { type: Boolean, default: false },
-    schedule_time: { type: String, require: true },
-    schedule_date: { type: String, require: true },
+    // schedule_time: { type: String, require: true },
+    // schedule_date: { type: String, require: true },
 
 }, { timestamps: true });
 

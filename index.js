@@ -71,8 +71,8 @@ app.post(
         change_byline,
         source,
         isApproved,
-        schedule_time,
-        schedule_date
+        // schedule_time,
+        // schedule_date
       } = data;
 
       data.userId = userId;
@@ -304,31 +304,54 @@ app.post(
 app.put("/:userId/ApprovalupdateNews", Middleware.jwtValidation, Middleware.authorization, async (req, res) => {
   try {
     let postNewsId = req.body._id;
-    const { schedule_time, schedule_date } = req.body;
+    let News = await PostArticleModel.findById({ _id: postNewsId });
 
-    try {
-      let news = await PostArticleModel.findById(postNewsId);
-
-      if (!news) {
-        return res.status(404).json({ error: 'News not found' });
-      }
-
-      if (!news.isApproved) {
-        news.schedule_time = schedule_time;
-        news.schedule_date = schedule_date;
-        news.isApproved = true;
-      }
-      const updatedNews = await news.save();
-
-      return res.status(200).json({
-        status: true,
-        message: 'Post updated successfully',
-        isApproved: updatedNews.isApproved
-      });
-    } catch (error) {
-      console.error(error);
-      return res.status(500).json({ error: 'Server error' });
+    if (News.isApproved == false) {
+      var updateNews = await PostArticleModel.findByIdAndUpdate(
+        { _id: postNewsId },
+        { $set: { isApproved: true } },
+        { new: true }
+      );
     }
+    // if (News.isApproved == true) {
+    //   var updateNews = await PostArticleModel.findByIdAndUpdate(
+    //     { _id: postNewsId },
+    //     { $set: { isApproved: false } },
+    //     { new: true }
+    //   );
+    // }
+    return res.status(200).send({
+      status: true,
+      message: "Post Update Successfully",
+      isApproved: updateNews.isApproved
+    })
+
+    // let postNewsId = req.body._id;
+    // const { schedule_time, schedule_date } = req.body;
+
+    // try {
+    //   let news = await PostArticleModel.findById(postNewsId);
+
+    //   if (!news) {
+    //     return res.status(404).json({ error: 'News not found' });
+    //   }
+
+    //   if (!news.isApproved) {
+    //     news.schedule_time = schedule_time;
+    //     news.schedule_date = schedule_date;
+    //     news.isApproved = true;
+    //   }
+    //   const updatedNews = await news.save();
+
+    //   return res.status(200).json({
+    //     status: true,
+    //     message: 'Post updated successfully',
+    //     isApproved: updatedNews.isApproved
+    //   });
+    // } catch (error) {
+    //   console.error(error);
+    //   return res.status(500).json({ error: 'Server error' });
+    // }
 
 
   } catch (err) {
