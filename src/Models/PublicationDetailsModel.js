@@ -67,6 +67,7 @@ const PublicationDetailsSchema = new mongoose.Schema(
 
     status_user: { type: String },
     status_publication: { type: String },
+    approved_by: { type: String, default:" " },
 
     token: { type: String },
   },

@@ -19,9 +19,8 @@ Router.post("/status", Controller.StatusModel)
 Router.post("/newsPaperAgencyLogin", Controller.NewsPaperAgencyLogin)
 Router.get("/:userId/postGet", Controller.getPostNews)
 Router.put("/:userId/postUpdate", Controller.updatePostNews);
-// Router.put("/:userId/UpdateDateTime", Controller.updateScheduleDateTime);
-
-
+Router.put("/:userId/UpdateDateTime", Controller.updateScheduleDateTime);
+Router.post("/:userId/addroles", Middleware.jwtValidation, Middleware.authorization, Controller.AddRolesModel);
 
 
 Router.use(bodyParser.json());

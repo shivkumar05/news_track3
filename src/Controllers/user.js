@@ -16,6 +16,9 @@ const PublicationDetailsModel = require("../Models/PublicationDetailsModel");
 const PostNewsModel = require("../Models/PostArticleModel");
 const UserModel = require("../Models/UserModel");
 const PostArticleModel = require("../Models/PostArticleModel");
+const Addrolesmodel = require("../Models/Add_RolesModel");
+const DraftModel = require("../Models/DraftModel");
+
 
 //*************** [Create User] *************************/
 
@@ -61,6 +64,7 @@ const createUser = async function (req, res) {
     res.status(500).send({ status: false, error: err.message });
   }
 };
+
 
 //**************** [User Login] ******************/
 
@@ -111,6 +115,7 @@ const userLogin = async function (req, res) {
     });
   }
 };
+
 
 //*****************[News Paper Agency Login]********/
 
@@ -163,6 +168,7 @@ const NewsPaperAgencyLogin = async function (req, res) {
   }
 };
 
+
 //**************** [Create Plateform]**************** */
 
 const CreatePlateform = async function (req, res) {
@@ -180,6 +186,7 @@ const CreatePlateform = async function (req, res) {
     res.status(500).send({ status: false, error: err.message });
   }
 };
+
 
 //************** [Create Categories] ******************/
 
@@ -199,6 +206,7 @@ const CreateCategories = async function (req, res) {
   }
 };
 
+
 //************* [Create SubCategories] ****************/
 
 const CreateSubCategories = async function (req, res) {
@@ -217,6 +225,7 @@ const CreateSubCategories = async function (req, res) {
   }
 };
 
+
 //*************** [User Language] **************/
 
 const UserLanguage = async function (req, res) {
@@ -234,6 +243,7 @@ const UserLanguage = async function (req, res) {
     res.status(500).send({ status: false, error: err.message });
   }
 };
+
 
 //******************* [Create Article] ************************/
 
@@ -254,6 +264,8 @@ const CreateArticle = async function (req, res) {
       sub_heading,
       short_details,
       description,
+      author_name,
+      approved_by,
     } = data;
 
     let Article = await ArticleModel.create(data);
@@ -266,6 +278,8 @@ const CreateArticle = async function (req, res) {
     res.status(500).send({ status: false, error: err.message });
   }
 };
+
+
 
 //**************** [Media type] **********************/
 
@@ -285,6 +299,7 @@ const createMediaModel = async function (req, res) {
   }
 };
 
+
 //************** [Check Box] ***************/
 
 const CheckBox = async function (req, res) {
@@ -302,6 +317,7 @@ const CheckBox = async function (req, res) {
     res.status(500).send({ status: false, error: err.message });
   }
 };
+
 
 //******************* [Select Model] *************** */
 
@@ -322,6 +338,7 @@ const SelectCategories = async function (req, res) {
   }
 };
 
+
 //****************** [State And Cities] ******************/
 
 const getState = async (req, res) => {
@@ -334,6 +351,7 @@ const getState = async (req, res) => {
     res.status(500).send({ success: false, msg: error.message });
   }
 };
+
 
 //**************** [Status Model] ********************** */
 
@@ -352,6 +370,7 @@ const StatusModel = async function (req, res) {
     res.status(500).send({ status: false, error: err.message });
   }
 };
+
 
 //******************** Get Post Article Model ************************** */
 
@@ -390,7 +409,8 @@ const getPostNews = async (req, res) => {
 
 };
 
-//==========================[Update Post News]======================//
+
+//==========================[ Update Post News ]======================//
 
 const updatePostNews = async (req, res) => {
   try {
@@ -415,26 +435,65 @@ const updatePostNews = async (req, res) => {
 };
 
 
-//**********************[Schedule Date/time Update ]****************************** */
+//**********************[ Schedule Date/time Update ]****************************** */
 
-// const updateScheduleDateTime = async (req, res) => {
-//   const { _id } = req.body;
-//   const { schedule_time, schedule_date } = req.body;
-//   try {
-//     const article = await PostArticleModel.findById(_id);
+const updateScheduleDateTime = async (req, res) => {
+  const { _id } = req.body;
+  const { schedule_time, schedule_date } = req.body;
+  try {
+    const article = await PostArticleModel.findById(_id);
 
-//     if (!article) {
-//       return res.status(404).json({ error: 'Article not found' });
-//     }
-//     article.schedule_time = schedule_time;
-//     article.schedule_date = schedule_date;
-//     await article.save();
-//     res.json(article);
-//   } catch (error) {
-//     console.error(error);
-//     res.status(500).json({ error: 'Server error' });
-//   }
-// };
+    if (!article) {
+      return res.status(404).json({ error: 'Article not found' });
+    }
+    article.schedule_time = schedule_time;
+    article.schedule_date = schedule_date;
+    await article.save();
+    res.json(article);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
+
+//**********************[ Add Roles Model ]****************************** */ 
+
+const AddRolesModel = async function (req, res) {
+  try {
+    let data = req.body;
+    let userId = req.params.userId;
+    let {
+      role_name,
+      status,
+      department,
+      designation,
+      role,
+      main_menu,
+      subMenu_level_1,
+      subMenu_level_2,
+      create_user,
+      user_role_custom,
+      post_news,
+      create_project,
+      create_job_task,
+      assign_task
+    } = data;
+
+
+    data.userId = userId
+    let Addrole = await Addrolesmodel.create(data);
+    res.status(201).send({
+      status: true,
+      message: "Add role Successfully",
+      data: Addrole,
+    });
+  } catch (err) {
+    res.status(500).send({ status: false, error: err.message });
+  }
+};
+
+
 
 
 module.exports = {
@@ -453,5 +512,7 @@ module.exports = {
   SelectCategories,
   getState,
   StatusModel,
-  // updateScheduleDateTime,
+  updateScheduleDateTime,
+  AddRolesModel
+
 };

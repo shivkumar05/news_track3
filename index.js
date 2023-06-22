@@ -13,7 +13,9 @@ const Middleware = require("./src/Middleware/auth");
 const UserRoleModel = require("./src/Models/User_RoleModel");
 const PostArticleModel = require("./src/Models/PostArticleModel");
 const PublicationDetailsModel = require("./src/Models/PublicationDetailsModel");
+const Addrolesmodel = require("./src/Models/Add_RolesModel");
 const UserModel = require("./src/Models/UserModel");
+const DraftModel = require("./src/Models/DraftModel");
 const port = process.env.PORT || 4000;
 
 app.use(cors());
@@ -26,7 +28,7 @@ mongoose.set("strictQuery", false);
 //===================== [ Multer Storage ] =================================
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    const destinationDir = "./uploads";
+    const destinationDir = "./uploads/image";
     fs.mkdirSync(destinationDir, { recursive: true });
     cb(null, destinationDir);
   },
@@ -46,7 +48,7 @@ const upload = multer({
 });
 
 //======================[Create Post news]==================================
-
+app.use("/image", express.static("./uploads/image"))
 app.post(
   "/:userId/post-news",
   Middleware.jwtValidation,
@@ -71,8 +73,8 @@ app.post(
         change_byline,
         source,
         isApproved,
-        // schedule_time,
-        // schedule_date
+        schedule_time,
+        schedule_date
       } = data;
 
       data.userId = userId;
@@ -90,6 +92,74 @@ app.post(
     }
   }
 );
+
+//======================[Create Draft news]==================================
+
+app.post(
+  "/:userId/draft-article",
+  Middleware.jwtValidation,
+  Middleware.authorization,
+  upload.single("image"),
+  async (req, res) => {
+    try {
+      let data = req.body;
+      let userId = req.params.userId;
+      let file = req.file;
+      let {
+        category,
+        title,
+        sub_heading,
+        short_details,
+        body,
+        image,
+        url,
+        tags,
+        news_priority,
+        news_sections,
+        change_byline,
+        source,
+        isApproved,
+        schedule_time,
+        schedule_date
+      } = data;
+
+      data.userId = userId;
+      if (file) {
+        data.image = `/image/${file.filename}`;
+      }
+      let PostArticle = await DraftModel.create(data);
+      res.status(201).send({
+        status: true,
+        message: "Post News Created Successfully",
+        data: PostArticle,
+      });
+    } catch (err) {
+      res.status(500).send({ status: false, error: err.message });
+    }
+  }
+);
+
+//***********************[ Draft Get Article ] *****************************/
+
+app.get("/:userId/get-draft-article", Middleware.jwtValidation, Middleware.authorization, async (req, res) => {
+  try {
+    let userId = req.params.userId;
+    // let articleId = req.params.articleId;
+
+    // Assuming you have a DraftModel defined
+
+    let draftArticle = await DraftModel.findById({ userId: userId });
+
+    if (!draftArticle) {
+      return res.status(404).send({ status: false, message: "Draft article not found" });
+    }
+
+    res.status(200).send({ status: true, data: draftArticle });
+  } catch (err) {
+    res.status(500).send({ status: false, error: err.message });
+  }
+});
+
 
 //====================== [Create User Role] ==================================
 
@@ -265,6 +335,7 @@ app.post(
         circulation,
         RNI_No,
         RNI_Regn_date,
+        approved_by,
       } = data;
 
       if (await PublicationDetailsModel.findOne({ email: email }))
@@ -304,7 +375,21 @@ app.post(
 app.put("/:userId/ApprovalupdateNews", Middleware.jwtValidation, Middleware.authorization, async (req, res) => {
   try {
     let postNewsId = req.body._id;
+    let userId = req.params.userId;
     let News = await PostArticleModel.findById({ _id: postNewsId });
+    console.log(News, "aaa")
+
+    let user = await UserModel.findById({ _id: userId }).lean();
+    if (user) {
+      News.approved_by = user.name;
+      console.log(user.name)
+    } else {
+      let publication = await PublicationDetailsModel.findById({ _id: userId }).lean();
+      if (publication) {
+        News.approved_by = publication.publisher_name;
+        console.log(publication.publisher_name)
+      }
+    }
 
     if (News.isApproved == false) {
       var updateNews = await PostArticleModel.findByIdAndUpdate(
@@ -313,56 +398,23 @@ app.put("/:userId/ApprovalupdateNews", Middleware.jwtValidation, Middleware.auth
         { new: true }
       );
     }
-    // if (News.isApproved == true) {
-    //   var updateNews = await PostArticleModel.findByIdAndUpdate(
-    //     { _id: postNewsId },
-    //     { $set: { isApproved: false } },
-    //     { new: true }
-    //   );
-    // }
+
     return res.status(200).send({
       status: true,
       message: "Post Update Successfully",
       isApproved: updateNews.isApproved
     })
 
-    // let postNewsId = req.body._id;
-    // const { schedule_time, schedule_date } = req.body;
-
-    // try {
-    //   let news = await PostArticleModel.findById(postNewsId);
-
-    //   if (!news) {
-    //     return res.status(404).json({ error: 'News not found' });
-    //   }
-
-    //   if (!news.isApproved) {
-    //     news.schedule_time = schedule_time;
-    //     news.schedule_date = schedule_date;
-    //     news.isApproved = true;
-    //   }
-    //   const updatedNews = await news.save();
-
-    //   return res.status(200).json({
-    //     status: true,
-    //     message: 'Post updated successfully',
-    //     isApproved: updatedNews.isApproved
-    //   });
-    // } catch (error) {
-    //   console.error(error);
-    //   return res.status(500).json({ error: 'Server error' });
-    // }
-
-
   } catch (err) {
     res.status(500).send({ status: false, error: err.message });
   }
+
 })
 
 app.get("/:userId/getApproval", Middleware.jwtValidation, Middleware.authorization, async (req, res) => {
   try {
-    const data = req.body;
-    const userId = req.params.userId;
+    var data = req.body;
+    var userId = req.params.userId;
 
     const response = await PostArticleModel.find().lean();
 
@@ -382,6 +434,7 @@ app.get("/:userId/getApproval", Middleware.jwtValidation, Middleware.authorizati
               approvedPosts[i].username = publication.publisher_name;
             }
           }
+
         }
 
         res.status(200).send({
@@ -412,30 +465,25 @@ app.get("/:userId/getApproval", Middleware.jwtValidation, Middleware.authorizati
   }
 });
 
-//**********************[ Reject And Update ]*************** */
+//********************** [ Reject And Update ] *************** */
 app.put("/:userId/RejectUpdateNews", Middleware.jwtValidation, Middleware.authorization, async (req, res) => {
   try {
     let postNewsId = req.body._id;
+    let data = req.body.remark;
     let News = await PostArticleModel.findById({ _id: postNewsId });
 
     if (News.isRejected == false) {
       var updateNews = await PostArticleModel.findByIdAndUpdate(
         { _id: postNewsId },
-        { $set: { isRejected: true } },
+        { $set: { isRejected: true, remark:data } },
         { new: true }
       );
     }
-    // if (News.isRejected == true) {
-    //   var updateNews = await PostArticleModel.findByIdAndUpdate(
-    //     { _id: postNewsId },
-    //     { $set: { isRejected: false } },
-    //     { new: true }
-    //   );
-    // }
     return res.status(200).send({
       status: true,
       message: "Post Update Successfully",
-      isRejected: updateNews.isRejected
+      isRejected: updateNews.isRejected,
+      remark: updateNews.remark
     })
 
   } catch (err) {
@@ -500,6 +548,115 @@ app.get("/:userId/getRejected", Middleware.jwtValidation, Middleware.authorizati
     });
   }
 });
+
+//********************* [ Get Add Roles ] ********************** */
+app.get("/:userId/getAddRoles", Middleware.jwtValidation, Middleware.authorization, async (req, res) => {
+  try {
+    let userId = req.params.userId;
+    let data = req.body;
+    let News = await Addrolesmodel.find({ userId: userId });
+    return res.status(200).send({
+      status: true,
+      message: "Get Add Roles Successfully",
+      data: News,
+    })
+  } catch (err) {
+    res.status(500).send({ status: false, error: err.message });
+  }
+})
+
+//********************* [ Get Add Roles Update ] *************** */
+
+// app.put("/:userId/updateAddRoles", Middleware.jwtValidation, Middleware.authorization, async (req, res) => {
+//   try {
+//     let userId = req.params.userId;
+//     let _id = req.body._id;
+//     let updatedRoleData = req.body;
+
+//     const updatedRole = await Addrolesmodel.findByIdAndUpdate(
+//       _id,
+//       updatedRoleData,
+//       { new: true }
+//     );
+//     return res.status(200).send({
+//       status: true,
+//       message: "Update Add Roles Successfully",
+//       data: updatedRole,
+//     });
+//   } catch (err) {
+//     res.status(500).send({ status: false, error: err.message });
+//   }
+// });
+
+
+app.put("/:userId/updateAddRoles", Middleware.jwtValidation, Middleware.authorization, async (req, res) => {
+  try {
+    let userId = req.params.userId;
+    let _id = req.body._id;
+
+    // Retrieve existing role data from the database
+    const existingRole = await Addrolesmodel.findByIdAndUpdate(_id);
+    if (!existingRole) {
+      return res.status(404).send({
+        status: false,
+        message: "Role not found",
+      });
+    }
+
+    // Merge existing role data with updated role data
+    let updatedRoleData = {
+      ...existingRole.toObject(),  // Convert to plain JavaScript object
+      ...req.body,  // Update fields provided in the request body
+      _id,  // Retain the existing _id
+    };
+
+    // Perform the update with the merged data
+    const updatedRole = await Addrolesmodel.findByIdAndUpdate(
+      _id,
+      updatedRoleData,
+      { new: true }
+    );
+
+    return res.status(200).send({
+      status: true,
+      message: "Update Add Roles Successfully",
+      data: updatedRole,
+    });
+  } catch (err) {
+    res.status(500).send({ status: false, error: err.message });
+  }
+});
+
+
+app.put("/:userId/updateAddRoles", async (req, res) => {
+  const roleId = req.params.id;
+  const updateFields = req.body;
+
+  try {
+    const role = await Addrolesmodel.findById(roleId);
+    if (!role) {
+      return res.status(404).json({ error: "Role not found" });
+    }
+
+    // Update the fields with true values
+    for (const key in updateFields) {
+      if (role[key] && Array.isArray(role[key])) {
+        const updatedArray = role[key].map((value, index) =>
+          updateFields[key][index] ? true : value
+        );
+        role[key] = updatedArray;
+      }
+    }
+
+    const updatedRole = await role.save();
+    res.json(updatedRole);
+  } catch (error) {
+    console.error("Error updating role:", error);
+    res.status(500).json({ error: "An error occurred while updating the role" });
+  }
+});
+
+module.exports = router;
 
 
 //************************ [Database Connection] ************ */
