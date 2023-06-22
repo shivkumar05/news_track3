@@ -141,24 +141,24 @@ app.post(
 
 //***********************[ Draft Get Article ] *****************************/
 
-app.get("/:userId/get-draft-article", Middleware.jwtValidation, Middleware.authorization, async (req, res) => {
-  try {
-    let userId = req.params.userId;
+// app.get("/:userId/get-draft-article", Middleware.jwtValidation, Middleware.authorization, async (req, res) => {
+//   try {
+//     let userId = req.params.userId;
     // let articleId = req.params.articleId;
 
     // Assuming you have a DraftModel defined
 
-    let draftArticle = await DraftModel.findById({ userId: userId });
+    // let draftArticle = await DraftModel.findById({ userId: userId });
 
-    if (!draftArticle) {
-      return res.status(404).send({ status: false, message: "Draft article not found" });
-    }
+    // if (!draftArticle) {
+    //   return res.status(404).send({ status: false, message: "Draft article not found" });
+    // }
 
-    res.status(200).send({ status: true, data: draftArticle });
-  } catch (err) {
-    res.status(500).send({ status: false, error: err.message });
-  }
-});
+  //   res.status(200).send({ status: true, data: draftArticle });
+  // } catch (err) {
+  //   res.status(500).send({ status: false, error: err.message });
+  // }
+// });
 
 
 //====================== [Create User Role] ==================================
